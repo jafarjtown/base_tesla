@@ -22,7 +22,7 @@ def get_dynamic_url(url, path, o={}):
     # print(sp_p, sp_u)    
     # getting the variables
     for i,p in enumerate(sp_p):
-        if "<" and ">" in p:
+        if "{" and "}" in p:
             v = p[1:-1]
             o[v] = sp_u[i]
         elif p != sp_u[i]:

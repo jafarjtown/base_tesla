@@ -2,11 +2,10 @@ import cgi
 import cgitb; cgitb.enable()
 from dataclasses import dataclass
 import os
-import tempfile
 import string 
 import random as r
 # from Cookie import SimpleCookie
-from datetime import datetime, timedelta
+from datetime import datetime
 # from time import t
 
 @dataclass
@@ -96,29 +95,31 @@ class Request:
         self.server_protocol = environ.get('SERVER_PROTOCOL')
         self.server_software = environ.get('SERVER_SOFTWARE')
 
+        self.set_session_id()
         # auth request's
-        authentication.authenticate(self.http_cookie, self.session)
+        authentication.authenticate(self.session_id, self.session)
 
         self.user = authentication.get_user()
         self.is_authenticated = self.user != authentication.ANONYMOUS 
         self.session_id = authentication.session_id
         self.parse_qs()
-        self.pass_csrf()
-        self.set_session_id()
+        # self.pass_csrf()
         pass
     
     def set_session_id(self):
         found = False
-        for c in self.http_cookie.split(';'):
-            key, value, *_ = c.split('=')
-            # print(2)
-            if key.strip() == 'usersession':
-                self.session_id = value.strip()
-                found = True
-                break
+        if self.http_cookie is not None:
+            
+            for c in self.http_cookie.split(';'):
+                key, value, *_ = c.split('=')
+                # print(2)
+                if key.strip() == 'usersession':
+                    self.session_id = value.strip()
+                    found = True
+                    break
         if found != True:    
             session = ''.join(r.sample(string.ascii_letters, 50))
-
+            self.session_id = session
             self.set_cookie('usersession', session)    
             
     def pass_csrf(self):
@@ -142,7 +143,16 @@ class Request:
     def parse_qs(self):
         # print(self.environ)
         if self.method != 'POST':
-            # self.
+            qs = self.query_string.split('&')
+            self.query = {}
+            for q in qs:
+                v = None
+                k = q
+                if '=' in q:
+                    k,v = q.split('=')
+                self.query[k] = v    
+                    
+            
             return
         
         self.post = PostBody({})
@@ -162,6 +172,9 @@ class Request:
                 
     def get_cookie(self):
         return ','.join(self.cookie)  
+    
+    def clear_cookie(self):
+        self.cookie = []
 
     def set_cookie(self, k, v):
         today = datetime.today()

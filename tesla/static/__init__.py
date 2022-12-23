@@ -5,7 +5,7 @@ import os
 
 @dataclass
 class StaticFiles:
-    path = './static/'
+    paths = ['./static/']
     request = None
     url = '/static/'
 
@@ -21,12 +21,16 @@ class StaticFiles:
         # print(request.params)
          
         filename = request.params['filename']
-        filename = self.path + filename
-        if not os.path.isfile(filename):
-             
-            return HttpResponse(request, f"invalidd address\n {filename}")
-        with open(filename) as file:
-            return HttpResponse(request, file.read(), content_type=f'text/{filename.split(".")[-1]}')
+        # print(self.paths)
+        for path in self.paths:
+            # print(path + filename)
+            if os.path.isfile(path + filename):
+                # print(path)
+                filename = path + filename
+                with open(filename) as file:
+                    return HttpResponse(request, file.read(), content_type=f'text/{filename.split(".")[-1]}')
+            
+        return HttpResponse(request, f"invalidd address\n {filename}")
 
 
  

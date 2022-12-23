@@ -1,0 +1,2 @@
+recursive-include tesla/admin/statics  *
+include tesla/admin/templates/admin/*.html

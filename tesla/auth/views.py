@@ -1,4 +1,4 @@
-from a.models import User
+from tesla import TeslaApp
 from tesla.functions import redirect
 from tesla.pyhtml import PYHTML
 from tesla.pyhtml.tags import  CT, CSS, CSSGroup
@@ -18,7 +18,7 @@ def login(request, user):
     request.set_cookie('usersession', session)
     global_db.add(session, user)
 
-    request.session.add_to_session(session, {'__id':user.get('id'),'session':str(session)})
+    request.session.add_to_session(session, {'__id': user.id,'session':str(session)})
 
 
 
@@ -31,12 +31,12 @@ def LoginView(request):
     if request.method == 'POST':
         username = request.post.get('username')
         password = request.post.get('password')
-        user = User.get(username=username, password=password)
+        user = TeslaApp.auth_model.get(username=username, password=password)
         # print(user)
         if user:
             login(request, user)
             return redirect(request, '/')
-        print(username, password)
+        # print(username, password)
     doc = PYHTML()
     head,body = doc.create_doc()
 
@@ -126,7 +126,7 @@ def RegisterView(request):
     if request.method == 'POST':
         username = request.post.get('username')
         password = request.post.get('password')
-        user = form_data.validate(request.post, User)
+        user = form_data.validate(request.post, TeslaApp.auth_model)
         # print(request.post.get('rmb'))
         # user = User(username=username, password=password).save()
         # print(user)

@@ -1,0 +1,45 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block admin_content %}
+		    <div class="container-xl">			    
+			    <h1 class="app-page-title">Settings</h1>
+				<div class="col-auto">
+					<a class="btn app-btn-primary" href="#"><svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-upload me-2" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+<path fill-rule="evenodd" d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+<path fill-rule="evenodd" d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+</svg>Upload File</a>
+				</div>
+			    <hr class="mb-4">
+                <div class="row g-4 settings-section">
+	                <div class="col-12 col-md-8">
+		                <div class="app-card app-card-settings shadow-sm p-4">
+						    
+						    <div class="app-card-body">
+							    <form class="settings-form" method="post">
+									<input type="text" value="{{csrf}}" name="csrfmiddleware" hidden>
+									
+									{% for k, v in obj.items() %}
+
+								    <div class="mb-3">
+									    <label for="setting-input-1" class="form-label">{{k|title}}</label>
+										{% if k == 'id' or k =='timestamp' %}
+									    	<input type="text" class="form-control" id="setting-input-1"  value="{{v}}" required disabled>
+									    	<input type="text" class="form-control" id="setting-input-1" name="{{k}}" value="{{v}}" required hidden>
+										{% else %}
+											
+									    	<input type="text" class="form-control" id="setting-input-1" name="{{k}}" value="{{v}}" required>
+										{% endif %}
+									</div>
+
+									{% endfor %}
+								
+									<button type="submit" class="btn app-btn-primary" >Save Changes</button>
+							    </form>
+						    </div><!--//app-card-body-->
+						    
+						</div><!--//app-card-->
+	                </div>
+                </div><!--//row-->
+                <hr class="my-4">
+		    </div><!--//container-fluid-->
+{% endblock admin_content %}

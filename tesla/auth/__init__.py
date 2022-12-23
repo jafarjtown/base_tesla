@@ -30,21 +30,15 @@ class Authentication:
         self.user = obj
         return self.user
 
-    def authenticate(self, cookie:str, session):
-        
-        if cookie == None:
+    def authenticate(self, session_id, session):
+        user_session = session.get(session_id)
+        # print(user_session)
+        # print(user_session)
+        self.session_id = session_id
+        if not user_session:
             return False
-        for c in cookie.split(';'):
-            key, value, *_ = c.split('=')
-            # print(2)
-            if key.strip() == 'usersession':
-                user_session = session.get(value.strip())
-                # print(user_session)
-                self.session_id = value.strip()
-                if not user_session:
-                    return False
-                user = self.model.get(id=user_session.get('__id'))
-                self.set_user(user)
+        user = self.model.get(id=user_session.get('__id'))
+        self.set_user(user)
 
      
         

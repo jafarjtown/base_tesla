@@ -1,18 +1,18 @@
-import imp
 from tesla.context import global_context
 from tesla.media import mediafiles
 from tesla.request import Request
-from tesla.response import Http404Response, HttpResponse, Http500Response
+from tesla.response import Http404Response, Http500Response
 from tesla.router import router
 from tesla.auth import Authentication
 from tesla.session import Session
 from tesla.static import staticfiles
 from tesla.middleware import middlewares
-
+from tesla.auth.modal import UserBaseModal
 
 import string
-import numbers
 import random as r
+
+
 
 def csrf():
     ls = []
@@ -22,13 +22,15 @@ def csrf():
     return ls
         
 
-class App: 
-    def __init__(self, auth_model,debug=False):
-        self.debug = debug
+class _App: 
+    def __init__(self):
+        self.debug = True
         self.router = router
         self.context = global_context
+        self.templates_folders = []
+        self.registered_models = []
        
-        self.auth_model = auth_model
+        self.auth_model = UserBaseModal
         self.csrf_tokens = csrf()
         self.middlewares = middlewares
         self.media_file = 'media'
@@ -55,30 +57,37 @@ class App:
         
         self.authentication = Authentication()
         self.session = Session({})
-        self.authentication.model = self.auth_model
+        if self.auth_model is not None:
+            self.authentication.model = self.auth_model
         
         request = Request(environ, start_response,self, self.csrf_tokens[r.randint(0, len(self.csrf_tokens)-1)], self.authentication, self.context, self.session, self.auth_model)
         staticfiles.request = request
         
         try:
-           
+            request.pass_csrf()
             for mid in self.middlewares.middlewares():
                 err = mid(request) 
                 if err:
-                    return Http500Response(request, err).make_response()
+                    return Http500Response(request, err, self.debug).make_response()
             
             func = self.router.get_route(request.path)
             if func is not None:
                 
                 response = func(request)
+                # response.templates_folders.extend(self.template_folders)
+                # print(type(response))
                 return response.make_response()
  
             else:
                 return Http404Response(request, self.debug, self.router.routes).make_response()
-        except Exception as e:
-            raise Exception(e)
-            # return Http500Response(request, e).make_response()
+        except Exception:
+            import traceback
+            # print('jjujujuju')
+            # raise Exception(e)
+            print(traceback.format_exc())
+            return Http500Response(request, traceback.format_exc(), self.debug).make_response()
     
-    
+
+TeslaApp = _App()    
     
     

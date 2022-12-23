@@ -77,23 +77,29 @@ class CSSGroup:
      
      
 class CT:
-    def __init__(self, tag,*args,**kwargs):
+    def __init__(self, tag, *args, params='', **kwargs ):
         self.tag = tag
         self.args = args
         self.kwargs = kwargs
-        self.kwargs["pyid"] = "pyhtml_" + str(uuid4()).split("-")[0]
-        self.doc = document.get('[pyid="'+self.kwargs.get('pyid')+'"]')
+        self.params = params
+        # self.kwargs["pyid"] = "pyhtml_" + str(uuid4()).split("-")[0]
+        # self.doc = document.get('[pyid="'+self.kwargs.get('pyid')+'"]')
     def __repr__(self):
         return f"<{self.tag} children={get_children(self, False)} />" 
     def html(self):
-        
-        r = " ".join(map(lambda elem: str(elem) , self.args))
+        # pr
+        r = " ".join(map(lambda elem: str(elem), self.args))
+        # print(self.args)
         kwargs = ''
         for k, v in self.kwargs.items():
             kwargs += f" {k}='{v}'"
-        return f"<{self.tag}{kwargs}>{r}</{self.tag}>"
+        # print(self.params)   
+        
+        return f"<{self.tag}{kwargs}{self.params}>{r}</{self.tag}>"
+
+
     def __str__(self):
-        return self.html()
+        return self.html()    
     def append(self, *tags):
         self.args = list(self.args)
         for tag in tags:

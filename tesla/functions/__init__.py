@@ -15,12 +15,11 @@ def media_file(url, *args, **kwargs):
     _, filetype = url.split('>')
     f, _ = filetype.split('/')
     url = '/' + url
-    match f:
-        case 'video':
+    if f == 'video':
             return CT('video',*args, **kwargs,  src=url)
-        case 'audio':
+    elif f == 'audio':
             return CT('audio',*args, **kwargs, src=url)
-        case 'image':
+    elif f == 'image':
             return CT('img',*args, **kwargs, src=url)
             
             
@@ -35,13 +34,30 @@ def static_url(file_path):
     return complete_url    
 
 
-def url(addr):
+def url(addr, *args, **kwargs):
     for route in router.routes:
         if ':' in addr:
-            ap, ur = addr.split(':')
+            # print(addr)
+            *_, ap, ur = addr.split(':')
             addr = f'{ur}_{ap}'
         if route.name == addr:
-            return f'http://{staticfiles.request.http_host}'+ route.path 
+            sp_u = route.path.split('/')
+            for i,p in enumerate(sp_u):
+                
+                if "{" and "}" in p:
+                    v = p[1:-1]
+                    param = kwargs.get(v)
+                    if not param:
+
+                        raise Exception(f'''
+    {v} can"t be None.
+    it suppose to be url('{addr.replace('_', ':')}', {v}=*something* ...)
+
+                            ''')
+                    sp_u[i] = param
+                    
+            return f'http://{staticfiles.request.http_host}' + '/'.join(sp_u)
+   
     return None
 
 
