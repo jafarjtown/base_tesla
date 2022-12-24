@@ -142,16 +142,17 @@ class Request:
  
     def parse_qs(self):
         # print(self.environ)
-        if self.method != 'POST':
-            qs = self.query_string.split('&')
-            self.query = {}
-            for q in qs:
-                v = None
-                k = q
-                if '=' in q:
-                    k,v = q.split('=')
-                self.query[k] = v    
+        qs = self.query_string.split('&')
+        self.query = {}
+        for q in qs:
+            v = None
+            k = q
+            if '=' in q:
+                k,v = q.split('=')
+            self.query[k] = v    
                     
+        if self.method != 'POST':
+            
             
             return
         

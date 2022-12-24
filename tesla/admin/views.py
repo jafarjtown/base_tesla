@@ -1,6 +1,6 @@
 
 from tesla.auth.decorators import login_required
-from tesla.auth.views import login as user_login
+from tesla.auth.views import login as user_login, authenticate
 from tesla.functions import url
 from tesla.response import HttpResponse, Redirect, Render, JsonResponse
 from tesla.pyhtml import CT
@@ -110,8 +110,8 @@ def login(request):
     if request.method == 'POST':
         u = request.post.get('username')
         p = request.post.get('password')
-        user = User.get(username=u, password=p)
-        if isinstance(user, User):
+        user = User.get(username=u)
+        if authenticate(user, p):
             user_login(request , user)
             return Redirect(request, 'admin:index')
     return Render(request, 'admin/login.html')

@@ -200,3 +200,17 @@ button{
     body.append(form)
     return HttpResponse(request, str(doc))
 
+
+def authenticate(user, en_password):
+    from argon2 import PasswordHasher
+    ph = PasswordHasher()
+    try:
+        ph.verify(user.password, en_password)
+        if ph.check_needs_rehash(user.password):
+            user.password= ph.hash(password)
+            user.save()
+            
+            ...
+        return  True   
+    except:
+        return False
