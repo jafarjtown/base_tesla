@@ -87,7 +87,7 @@ class HttpResponse(Response):
     def __init__(self, request: Request, content,  status_code='200 OK', content_type='text/html'):
         super().__init__(request, status_code, content_type)
         if type(content) == str:
-            content = content.encode()
+            content = f'{content}'.encode()
         self.response_content.append(content)
 
 

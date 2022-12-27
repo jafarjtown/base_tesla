@@ -47,8 +47,17 @@ class PostBody:
         # if type(value) == str:
         #     print(dir(cgi))
         #     value = cgi.escape(value)
+        
 
         return value
+    
+    def addlist(self, key, value):
+        if type(self.get(key)) == str or type(self.get(key)) == int:
+            fs = self.get(key) 
+            self.set(key, [fs])
+        lst = self.get(key)   
+        lst.append(value)
+        self.set(key, lst) 
     
     def set(self, key, value):
         self.data[key] = value
@@ -145,11 +154,11 @@ class Request:
         qs = self.query_string.split('&')
         self.query = {}
         for q in qs:
-            v = None
+            v = ''
             k = q
             if '=' in q:
                 k,v = q.split('=')
-            self.query[k] = v    
+            self.query[k] = v.replace('+', ' ')    
                     
         if self.method != 'POST':
             
@@ -166,6 +175,9 @@ class Request:
          
         for item in field_storage.list:
             if not item.filename:
+                if self.post.get(item.name):
+                    self.post.addlist(item.name, item.value)
+                    continue
                 self.post.set(item.name, item.value)
             else:
                 # print((item.type))

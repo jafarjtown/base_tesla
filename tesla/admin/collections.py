@@ -10,7 +10,8 @@ class Collection:
              return self.models[model.__name__]
          self.models[model.__name__] = {
              'name': model.__name__,
-             'counts': 50
+             'counts': model.size()[0],
+             'size': model.size()[1]
          }
          return model
      

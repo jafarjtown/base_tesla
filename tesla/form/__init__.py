@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from tesla.pyhtml.tags import CT
+from tesla.modal import ForeignKey, ManyToManyField
 from tesla.request import TemporaryFile
 import copy
 
@@ -20,7 +21,7 @@ class Form:
         # print(self.fields())
     def save(self):
         fields = self.fields()
-        print(self.html())
+        # print(self.html())
     
     def fields(self):
 
@@ -45,34 +46,28 @@ class ModelForm:
         html = []
         model = self.model()
         if isinstance(self.fields, list):
-            
-            for field in self.fields:
-                value = copy.deepcopy(getattr(model, field))
-                value.name = field
-                if self.instance:
-                    obj = self.instance
-                    default = (getattr(obj, field))
-                    if type(default) == str:
-                        value.default = default
-                # print(field, value)
-                # else:
-                #     value.default = ''
-                html.append(value)
-            ...
+            fields = self.fields
         else:
-            for field in self.model.property_cls():
-                value = copy.deepcopy(getattr(model, field))
-                value.name = field
-                
-                if self.instance:
-                    obj = self.instance
-                    # print(value.default)
-                    default = (getattr(obj, field))
-                    if type(default) == str:
-                        value.default = default
-                # else:
-                #     value.default = ''        
-                html.append(value)
+            fields = self.model.property_cls()   
+        for field in fields:
+            value = copy.deepcopy(getattr(model, field))
+            value.name = field
+            
+            if self.instance:
+                obj = self.instance
+                # print(value.default)
+                default = (getattr(obj, field))
+                if type(default) == str:
+                    value.default = default
+            else:
+                if issubclass(type(value), (ForeignKey)):
+                    
+                        value.related_model_id = None
+                    
+                if issubclass(type(value), (ManyToManyField)):
+                    value.related_model_ids = []            
+            #     value.default = ''        
+            html.append(value)
             ...
         # print('passs......')    
         return html    
@@ -81,6 +76,7 @@ class ModelForm:
         return f'{self.html()}'   
 
     def validate(self, **kwargs):
+        
         new_model = copy.deepcopy(self.model)
 
         if type(self.fields) == list:
@@ -94,8 +90,16 @@ class ModelForm:
             return new_model.create(**kwargs) 
 
         for field, value in kwargs.items():
+            if '__' in field:
+                field = field.split('__')[0]
+                tt = type(getattr(new_model, field))
+                if not issubclass(tt, (ForeignKey, ManyToManyField)):
+                    field += '__' + field[1]
+                    
             f = getattr(new_model, field)
             v = f.validate(value)
+        # print(kwargs)  
+        # print('123')  
         return new_model.create(**kwargs) 
 
     def save(self):

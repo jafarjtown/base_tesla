@@ -101,8 +101,7 @@ class DBCache:
 
     def remove(self, collection, key):
         del self.db[collection][key]
-        
-        
+
 
 local_db = DBCache({})
 
@@ -229,6 +228,10 @@ class JsonDB:
             if m.__name__ == model_n:
                 self.model = m
 
+    def size(self):
+        l = os.listdir(self.path + self.collection)
+        return len(l), sum(os.path.getsize(self.path + self.collection + f) for f in l if os.path.isfile(self.path + self.collection + f))
+
     @classmethod
     def get_collection(cls, model, dept=1):
 
@@ -256,9 +259,7 @@ class JsonDB:
         os.remove(self.path + self.collection + table_name + '.json')
         local_db.remove(self.collection[:-1], table_name)
         return None
-        
-        
-        
+
     def all(self, models=False):
         # print(local_db)
 

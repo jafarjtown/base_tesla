@@ -7,10 +7,11 @@ from . import views
 
 patterns = [
     Path('', views.index, name='index'),
-    Path('login', views.login, name='login'),
-    Path('logout', views.logout, name='logout'),
-    Path('register', views.register, name='register'),
-    Path('reset-password', views.reset_password, name='reset-password'),
+    Path('account/', views.admin_account, name='admin_account'),
+    Path('login/', views.login, name='login'),
+    Path('logout/', views.logout, name='logout'),
+    Path('register/', views.register, name='register'),
+    Path('reset-password/', views.reset_password, name='reset-password'),
     Path('collections', views.collections, name='collections'),
     Path('collections/{collection}/', views.collection, name='collection'),
     Path('collections/{collection}/new/', views.collection_new, name='collection_new'),

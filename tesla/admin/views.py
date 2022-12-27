@@ -1,4 +1,5 @@
 
+import tesla
 from tesla.auth.decorators import login_required
 from tesla.auth.views import login as user_login, authenticate
 from tesla.functions import url
@@ -7,7 +8,9 @@ from tesla.pyhtml import CT
 from .models import User
 from .forms import AdminForm
 from tesla.database.jsondb import JsonDB
-
+from tesla.views import View, DetailView, RetriveAllView
+from tesla.pagination import Paginator
+from tesla.search import Search
 
 from . import collections_manage
 
@@ -17,16 +20,40 @@ from . import collections_manage
 def collections(request):
     context = {}
     context['names'] = collections_manage.colls()
+    
     return Render(request, 'admin/colls.html', context)
+
+
+# class AdminRetriveAllView(RetriveAllView):
+#     model = User
+#     template = 'admin/col.html'
+#     lookup = 'collection'
+#     pagination = True
+#     pagination_count = 10
 
 def collection(request):
     collection = request.params.get('collection') 
     model_db = JsonDB(collection + '/')
-    models = model_db.all(models=True)
     model = model_db.model()
-    # print(models)
     context = {}
-    context['objs'] = models
+    search_for = request.query.get('search')
+    if search_for:
+        models = Search(model.all(models=True), search_for, model.__meta__()).result()
+        context['search_for'] = search_for
+    else:    
+        models = model_db.all(models=True)
+    page = request.query.get('page')
+    if not page:
+        page = 1
+    paginator = Paginator(models, page=int(page))
+    # print(models)
+    context['objs'] = paginator.current()
+    context['next'] = paginator.next()
+    context['previous'] = paginator.previous()
+    context['pages'] = paginator.pages_lists()
+    context['page'] = paginator.page
+    # print(paginator.pages_lists())
+    # context['objs'] = models
     context['info'] = model.__meta__()
     context['collection'] = collection
     return Render(request, 'admin/col.html', context)
@@ -45,8 +72,11 @@ def collection_obj(request):
     if request.method == 'POST':
         data = request.post.data
         del data['csrfmiddleware']
+        # print(data)
         obj.update(**data)
-        obj.save()
+        obj = obj.save()
+        
+        return Redirect(request, 'admin:collection_obj', lookup = lookup, collection = collection)
     context = {}
     context['lookup'] = lookup
     context['collection'] = collection
@@ -78,24 +108,42 @@ def collection_del(request):
     obj.delete()
     return Redirect(request, 'admin:collection', collection=collection)
 
-
 def collection_del_all(request):
     lookup = request.params.get('lookup')
     collection = request.params.get('collection')
     model_db = JsonDB(collection + '/')
-    objs = model_db.model().all(model=True)
+    objs = model_db.model().all(models=True)
     for obj in objs:
         obj.delete()
     return Redirect(request, 'admin:collection', collection=collection)
 
-
 def collection_download(request):
-    lookup = request.params.get('lookup')
+    
     collection = request.params.get('collection')
     model_db = JsonDB(collection + '/')
-    objs = model_db.model().all(model=False)
-    print(objs)
+    objs = model_db.model().all(models=False)
     return JsonResponse(request, objs)
+
+def admin_account(request):
+    obj = tesla.TeslaApp.auth_model.get(id=request.user.id)
+    if 'json' in request.query:
+        return JsonResponse(request, obj.json())
+    print(obj) 
+    form = AdminForm(obj)
+    form.model = tesla.TeslaApp.auth_model
+    form.fields = '__all__'
+    if request.method == 'POST':
+        data = request.post.data
+        del data['csrfmiddleware']
+        obj.update(**data)
+        obj.save()
+    context = {}
+    context['form'] = form
+    return Render(request, 'admin/account.html', context)
+
+    
+def admin_settings(request):
+    ...    
 
 @login_required(path='admin:login')
 def index(request):

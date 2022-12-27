@@ -20,3 +20,7 @@ class User(UserBaseModal):
     def __meta__(self):
         
         return ('id', 'username', 'email')
+    
+    
+    def __str__(self) -> str:
+        return self.username
