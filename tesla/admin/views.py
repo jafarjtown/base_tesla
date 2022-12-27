@@ -24,13 +24,8 @@ def collections(request):
     return Render(request, 'admin/colls.html', context)
 
 
-# class AdminRetriveAllView(RetriveAllView):
-#     model = User
-#     template = 'admin/col.html'
-#     lookup = 'collection'
-#     pagination = True
-#     pagination_count = 10
 
+@login_required(path='admin:login')
 def collection(request):
     collection = request.params.get('collection') 
     model_db = JsonDB(collection + '/')
@@ -58,6 +53,7 @@ def collection(request):
     context['collection'] = collection
     return Render(request, 'admin/col.html', context)
 
+@login_required(path='admin:login')
 def collection_obj(request):
     lookup = request.params.get('lookup')
     collection = request.params.get('collection')
@@ -83,6 +79,7 @@ def collection_obj(request):
     context['form'] = form
     return Render(request, 'admin/obj.html', context)
 
+@login_required(path='admin:login')
 def collection_new(request):
     context = {}
     collection = request.params.get('collection')
@@ -99,7 +96,8 @@ def collection_new(request):
         f.save()
         return Redirect(request, 'admin:collection_obj', collection=collection, lookup=f.id)
     return Render(request, 'admin/col_n.html', context)    
-    
+
+@login_required(path='admin:login')    
 def collection_del(request):
     lookup = request.params.get('lookup')
     collection = request.params.get('collection')
@@ -108,6 +106,7 @@ def collection_del(request):
     obj.delete()
     return Redirect(request, 'admin:collection', collection=collection)
 
+@login_required(path='admin:login')
 def collection_del_all(request):
     lookup = request.params.get('lookup')
     collection = request.params.get('collection')
@@ -117,6 +116,7 @@ def collection_del_all(request):
         obj.delete()
     return Redirect(request, 'admin:collection', collection=collection)
 
+@login_required(path='admin:login')
 def collection_download(request):
     
     collection = request.params.get('collection')
@@ -124,6 +124,7 @@ def collection_download(request):
     objs = model_db.model().all(models=False)
     return JsonResponse(request, objs)
 
+@login_required(path='admin:login')
 def admin_account(request):
     obj = tesla.TeslaApp.auth_model.get(id=request.user.id)
     if 'json' in request.query:
@@ -141,7 +142,7 @@ def admin_account(request):
     context['form'] = form
     return Render(request, 'admin/account.html', context)
 
-    
+@login_required(path='admin:login')    
 def admin_settings(request):
     ...    
 
