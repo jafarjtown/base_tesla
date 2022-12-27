@@ -17,6 +17,7 @@ from . import collections_manage
 # your views
 
 
+@login_required(path='admin:login')
 def collections(request):
     context = {}
     context['names'] = collections_manage.colls()

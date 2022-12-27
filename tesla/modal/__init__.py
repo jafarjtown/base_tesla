@@ -3,7 +3,6 @@ from copy import deepcopy
 from dataclasses import InitVar, asdict, dataclass, field, astuple
 
 
-
 from tesla.pyhtml.tags import CT, CSS
 
 
@@ -181,9 +180,12 @@ class ForeignKey(Field):
     def __init__(self, related_model, required=False, label=None) -> None:
         super().__init__(required, label)
         self.related_model = related_model
-        self.option_models = related_model.all()
         self.related_model_id = None
         self.type = 'select'
+
+    @property
+    def option_models(self):
+        return self.related_model.all()
 
     def __pre_show__(self):
         for obj in self.option_models:
@@ -200,38 +202,41 @@ class ForeignKey(Field):
 
         return super().input(name, **kwargs)
 
+
 class ManyToManyField(Field):
-    
+
     def __init__(self, related_model, required=False, label=None) -> None:
         super().__init__(required, label)
         # self.default = []
         self.related_model = related_model
-        self.option_models = related_model.all()
+        # self.option_models = related_model.all()
         self.related_model_ids = []
         self.type = 'select'
-        
-    
+
+    @property
+    def option_models(self):
+        return self.related_model.all()
+
     def __pre_show__(self):
-          self.tag.params += 'multiple'
-          for obj in self.option_models:
+        self.tag.params += 'multiple'
+        for obj in self.option_models:
 
             opt = CT('option', str(obj), value=obj.id)
             if obj.id in self.related_model_ids:
 
                 opt.params += ' selected'
             self.tag.append(opt)
-          return super().__pre_show__()
-      
-      
+        return super().__pre_show__()
+
     def input(self, name, **kwargs):
         name += '__ids'
 
         return super().input(name, **kwargs)
-    
-    
+
     def related_models(self):
-        return [self.related_model.get(id = id) for id in self.related_model_ids]
-              
+        return [self.related_model.get(id=id) for id in self.related_model_ids]
+
+
 class Model:
 
     id = CharField()
@@ -253,9 +258,9 @@ class Model:
         kwargs['timestamp'] = str(datetime.now())
         c = cls()
         for k, v in kwargs.items():
-             
+
             setattr(c, k, v)
-            
+
         return c
 
     @classmethod
@@ -286,9 +291,9 @@ class Model:
                         tt.related_model_ids = []
                         for i in v:
                             tt.related_model_ids.append(i)
-                        setattr(c, mn, tt.related_models())    
+                        setattr(c, mn, tt.related_models())
                         # print(v)
-                        # setattr(c, mn, tt.related_model.get(id=v))    
+                        # setattr(c, mn, tt.related_model.get(id=v))
 
                 setattr(c, k, v)
             # c.assign_foreign()
@@ -320,7 +325,7 @@ class Model:
                         tt.related_model_ids = []
                         for i in v:
                             tt.related_model_ids.append(i)
-                        setattr(c, mn, tt.related_models())        
+                        setattr(c, mn, tt.related_models())
                 setattr(c, k, v)
         return c
 
@@ -352,15 +357,15 @@ class Model:
             if issubclass(type(v), Model):
                 del j[k]
             if issubclass(type(v), (ForeignKey, ManyToManyField)):
-                    if j.get(k):
-                        del j[k]
-                    k = k + '__id'
-                    if isinstance(getattr(cls_copy, kk), ManyToManyField):
-                        k += 's'
-                    j[k] = v  
-            if type(v) == list and len(v) > 0 and  issubclass(type(v[0]), Model):    
-                del j[k]          
-            if '__' in k:  
+                if j.get(k):
+                    del j[k]
+                k = k + '__id'
+                if isinstance(getattr(cls_copy, kk), ManyToManyField):
+                    k += 's'
+                j[k] = v
+            if type(v) == list and len(v) > 0 and issubclass(type(v[0]), Model):
+                del j[k]
+            if '__' in k:
                 kk = k.split('__')[0]
                 if issubclass(type(getattr(cls_copy, kk)), (ForeignKey, ManyToManyField)):
                     # del j[k]
@@ -372,16 +377,16 @@ class Model:
                         # k += 's'
                         if type(v) == str:
                             v = [v]
-                        
+
                     # j[k] = v
-                    # setattr(self, k, v)          
+                    # setattr(self, k, v)
 
         if not bool(self.id):
             self.id = str(uuid.uuid4())
             j['id'] = self.id
             self.timestamp = str(datetime.now())
             j['timestamp'] = self.timestamp
-        # print(j)    
+        # print(j)
         self.db.create_column(model=j, table_name=str(self.id))
         # self.db.g
         return self
@@ -404,10 +409,10 @@ class Model:
                     tt.related_model_ids = []
                     if type(v) == str:
                         v = [v]
-                    # print(v)    
+                    # print(v)
                     for i in v:
                         tt.related_model_ids.append(i)
-                       
+
             setattr(self, k, v)
         return self
 
@@ -453,11 +458,16 @@ class Model:
 
         return ls
 
-    # @property
     def admin_dis(self):
         tp = self.__meta__()
+        cls_dis = self.get(id=self.id)
         f = []
         for t in tp:
-            f.append(getattr(self, t))
+
+            tt = getattr(cls_dis, t)
+
+            if issubclass(type(tt), list):
+                tt = ', '.join([str(m) for m in tt])
+            f.append(tt)
 
         return f
