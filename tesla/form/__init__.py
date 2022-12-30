@@ -57,7 +57,7 @@ class ModelForm:
                 obj = self.instance
                 # print(value.default)
                 default = (getattr(obj, field))
-                if type(default) == str:
+                if type(default) == str or type(default) == bool:
                     value.default = default
             else:
                 if issubclass(type(value), (ForeignKey)):

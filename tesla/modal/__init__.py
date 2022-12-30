@@ -253,7 +253,15 @@ class BooleanField(Field):
         super().__init__(required, label)
         self.input_type = 'checkbox'
         self.default = False
-
+    
+    def html(self, **kwargs) -> str:
+        self.input(self.name)
+        if self.default:
+            self.params += ' checked'
+        self.tag = CT('input', type='checkbox', name=self.name, params=self.params)
+        # return super().html(**kwargs)
+        self.__pre_show__()
+        return self.tag.html()
 class Model:
 
     id = CharField()
@@ -368,8 +376,9 @@ class Model:
 
         js = self.json()
         j = copy.deepcopy(js)
-        props = {**to_dict(property_obj(cls_copy, True)), **j}
-        print(j)
+        cls_props = to_dict(property_obj(cls_copy, True))
+        props = {**cls_props, **j}
+
 
         for k, v in props.items():
             if '__' in k:
@@ -391,7 +400,12 @@ class Model:
                     j[kk] = v.default
                 continue
             elif issubclass(type(v), BooleanField):
-                j[k] = 'off'
+                j[k] = v.default
+            elif issubclass(type(cls_props.get(k)), BooleanField):
+                if v == 'on':
+                    j[k] = True  
+                else:
+                    j[k] = False        
             setattr(self, k, v)
 
         # if not bool(self.id):

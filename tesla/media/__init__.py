@@ -7,7 +7,8 @@ import os
 media_types = {
     'video': ['mp4'],
     'audio': ['mp3'],
-    'image': ['png, jpg, jpeg']
+    'image': ['png, jpg, jpeg'],
+    
 }
 
 def get_media_type(ex):

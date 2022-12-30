@@ -25,8 +25,17 @@
 
 						<div class="mb-3">
 							<label for="setting-input-1" class="form-label">{{f.name|title}}</label>
-
+							{% if f.input_type in ['checkbox'] %}
+							{{f.html()|safe}}
+							
+							{% elif f.input_type == 'password' %}
+							{{f.html(class='form-control', disabled=True)|safe}}
+								
+							{% else %}
+						
 							{{f.html(class='form-control')|safe}}
+							
+							{% endif %}
 						</div>
 
 						{% endfor %}

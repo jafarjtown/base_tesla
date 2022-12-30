@@ -7,7 +7,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 with codecs.open(os.path.join(here, "README.md"), encoding="utf-8") as fh:
     long_description = "\n" + fh.read()
 
-VERSION = '0.0.3.6'
+VERSION = '0.0.3.7'
 DESCRIPTION = 'A flexiable web framework'
 LONG_DESCRIPTION = 'A package that allows to build simple web application that use json db'
 
@@ -21,7 +21,7 @@ setup(
     long_description_content_type="text/markdown",
     long_description=long_description,
     packages=find_packages(),
-    install_requires=['uuid','jinja2', 'tesla-admin', 'argon2-cffi'],
+    install_requires=['uuid','jinja2', 'tesla-admin', 'argon2-cffi', 'waitress'],
     keywords=['python', 'web', 'auth'],
     classifiers=[
         "Development Status :: 1 - Planning",

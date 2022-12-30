@@ -57,6 +57,7 @@ def collection(request):
 
 @login_required(path='admin:login')
 def collection_obj(request):
+    print(request.user.is_super_user)
     lookup = request.params.get('lookup')
     collection = request.params.get('collection')
     model_db = JsonDB(collection + '/')
