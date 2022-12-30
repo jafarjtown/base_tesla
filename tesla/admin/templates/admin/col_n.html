@@ -15,11 +15,11 @@
 
 								    <div class="mb-3">
 									    <label for="setting-input-1" class="form-label">{{f.name|title}}</label>
-										{{f|safe}}
+										{{f.html(class='form-control')|safe}}
 									</div>
 
 									{% endfor %}								
-									<button type="submit" class="btn app-btn-primary" >Save Changes</button>
+									<button type="submit" class="btn app-btn-primary" >Save</button>
 							    </form>
 						    </div><!--//app-card-body-->
 						    

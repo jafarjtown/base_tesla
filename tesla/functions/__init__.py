@@ -30,7 +30,7 @@ def include():
 
 def static_url(file_path):
    
-    complete_url = f'http://{staticfiles.request.http_host}' + staticfiles.url + file_path
+    complete_url = staticfiles.url + file_path
     return complete_url    
 
 

@@ -28,6 +28,7 @@ class StaticFiles:
                 # print(path)
                 filename = path + filename
                 with open(filename) as file:
+                    request.headers += [('cache-control', 'public, max-age=3256926')]
                     return HttpResponse(request, file.read(), content_type=f'text/{filename.split(".")[-1]}')
             
         return HttpResponse(request, f"invalidd address\n {filename}")

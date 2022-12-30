@@ -25,7 +25,8 @@
 
 						<div class="mb-3">
 							<label for="setting-input-1" class="form-label">{{f.name|title}}</label>
-							{{f|safe}}
+
+							{{f.html(class='form-control')|safe}}
 						</div>
 
 						{% endfor %}

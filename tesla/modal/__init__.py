@@ -1,7 +1,7 @@
 # from __future__ import annotations
 from copy import deepcopy
-from dataclasses import InitVar, asdict, dataclass, field, astuple
 
+from tesla.signal import signal
 
 from tesla.pyhtml.tags import CT, CSS
 
@@ -17,13 +17,22 @@ from tesla.request import TemporaryFile
 _no_default_object = object()
 
 
-def property_obj(arr):
+def property_obj(arr, d=None):
     a = []
-    for l in arr.__dict__:
+    for l, v in arr.__dict__.items():
         if not l.startswith('__'):
             if l != 'id' and l != 'timestamp':
+                if d:
+                    l = (l, v)
                 a.append(l)
 
+    return a
+
+
+def to_dict(arr):
+    a = {}
+    for k, v in arr:
+        a[k] = v
     return a
 
 
@@ -84,10 +93,10 @@ class Field:
             self.css.kwargs['resize'] = 'none'      # s
         return self
 
-    def html(self) -> str:
+    def html(self, **kwargs) -> str:
         self.input(self.name)
 
-        self.tag = CT(self.type, **{'class': "form-control"},  style=self.css.css(
+        self.tag = CT(self.type, **kwargs, style=self.css.css(
         ), type=self.input_type, name=self.name, value=self.default, params=self.params)
         if self.type != 'input':
             self.tag.append(self.default)
@@ -166,6 +175,7 @@ class DateField(CharField):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.input_type = 'date'
+        self.default = str(datetime.now())
 
 
 class DictField(Field, dict):
@@ -179,6 +189,7 @@ class ForeignKey(Field):
 
     def __init__(self, related_model, required=False, label=None) -> None:
         super().__init__(required, label)
+        self.default = None
         self.related_model = related_model
         self.related_model_id = None
         self.type = 'select'
@@ -207,7 +218,7 @@ class ManyToManyField(Field):
 
     def __init__(self, related_model, required=False, label=None) -> None:
         super().__init__(required, label)
-        # self.default = []
+        self.default = []
         self.related_model = related_model
         # self.option_models = related_model.all()
         self.related_model_ids = []
@@ -236,6 +247,12 @@ class ManyToManyField(Field):
     def related_models(self):
         return [self.related_model.get(id=id) for id in self.related_model_ids]
 
+class BooleanField(Field):
+    
+    def __init__(self, required=False, label=None) -> None:
+        super().__init__(required, label)
+        self.input_type = 'checkbox'
+        self.default = False
 
 class Model:
 
@@ -260,7 +277,7 @@ class Model:
         for k, v in kwargs.items():
 
             setattr(c, k, v)
-
+        c = c.save()
         return c
 
     @classmethod
@@ -345,50 +362,48 @@ class Model:
         return (self.__class__.__name__)
 
     def save(self):
+        created = not bool(self.get(id = self.id))
+        signal.send(self.__class__, self, created, 'pre-save')
         cls_copy = self.__class__
 
         js = self.json()
         j = copy.deepcopy(js)
-        for k, v in js.items():
-            print(k, v)
-            if isinstance(v, TemporaryFile):
+        props = {**to_dict(property_obj(cls_copy, True)), **j}
+        print(j)
 
-                j[k] = v.save()
-            if issubclass(type(v), Model):
-                del j[k]
-            if issubclass(type(v), (ForeignKey, ManyToManyField)):
-                if j.get(k):
-                    del j[k]
-                k = k + '__id'
-                if isinstance(getattr(cls_copy, kk), ManyToManyField):
-                    k += 's'
-                j[k] = v
-            if type(v) == list and len(v) > 0 and issubclass(type(v[0]), Model):
-                del j[k]
+        for k, v in props.items():
             if '__' in k:
-                kk = k.split('__')[0]
-                if issubclass(type(getattr(cls_copy, kk)), (ForeignKey, ManyToManyField)):
-                    # del j[k]
-                    # if j.get(k):
-                    #     del j[k]
-                    # kk = k
-                    # k = k + '__id'
-                    if isinstance(getattr(cls_copy, kk), ManyToManyField):
-                        # k += 's'
-                        if type(v) == str:
-                            v = [v]
+                ref_k = k.split('__')[0]
+                if ref_k in j:
+                    del j[ref_k]
+            if type(v) == str and '__ids' in k:
+                j[k] = [v]
+            if issubclass(type(v), (ForeignKey, ManyToManyField)):
+                is_m2m = issubclass(type(v), ManyToManyField)
+                # is_1t1 = issubclass(type(v), ForeignKey)
+                kk = k + '__id'
+                if is_m2m:
+                    kk += 's'
+                if kk in j.keys():
+                    if k in j.keys():
+                        del j[k]
+                else:
+                    j[kk] = v.default
+                continue
+            elif issubclass(type(v), BooleanField):
+                j[k] = 'off'
+            setattr(self, k, v)
 
-                    # j[k] = v
-                    # setattr(self, k, v)
-
-        if not bool(self.id):
-            self.id = str(uuid.uuid4())
-            j['id'] = self.id
-            self.timestamp = str(datetime.now())
-            j['timestamp'] = self.timestamp
+        # if not bool(self.id):
+        #     self.id = str(uuid.uuid4())
+        #     j['id'] = self.id
+        #     self.timestamp = str(datetime.now())
+        #     j['timestamp'] = self.timestamp
         # print(j)
         self.db.create_column(model=j, table_name=str(self.id))
         # self.db.g
+        signal.send(self.__class__, self, created,'post-save')
+        
         return self
 
     def update(self, **kwargs):
@@ -471,3 +486,6 @@ class Model:
             f.append(tt)
 
         return f
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}({self.id})'

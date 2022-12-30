@@ -3,12 +3,11 @@ import tesla
 from tesla.pages import ErrorPage
 from tesla.request import Request
 from tesla.messages import messages_broker
- 
+
 
 import os
 
 from jinja2 import Environment, FileSystemLoader, PackageLoader, select_autoescape, ChoiceLoader
-
 
 
 class Response:
@@ -18,13 +17,12 @@ class Response:
         self.start_response = request.start_response
         self.content_type = content_type
         # print(request.get_cookie())
-        self.headers = [('Content-type', self.content_type),
-                        ('Set-cookie', request.get_cookie())]
+        self.headers = [('Content-type', self.content_type)]
+        self.headers += request.headers
+
         self.response_content = []
         self.templates_folders = ['./']
         self.templates_folders.extend(tesla.TeslaApp.templates_folders)
-
-        ...
 
     def make_response(self):
         self.start_response(self.status_code, self.headers)
@@ -45,19 +43,20 @@ class Render(Response):
     def __init__(self, request: Request, content, context={},  status_code='200 OK', content_type='text/html'):
 
         # request.cookie = self.parse_cookie(request.http_cookie)
+        request.headers += [('cache-control', 'private, no-cache')]
         super().__init__(request, status_code, content_type)
         # env = Environment(loader=PackageLoader('jinja2', '/'))
 
         # if self.is_available(content) is not None:
-            # template = env.get_template(self.is_available(content))
+        # template = env.get_template(self.is_available(content))
         file_loader = FileSystemLoader(self.templates_folders)
         loader = ChoiceLoader([
-    # PackageLoader("tesla.admin", 'templates'),
-    FileSystemLoader(self.templates_folders)
-])
+            # PackageLoader("tesla.admin", 'templates'),
+            FileSystemLoader(self.templates_folders)
+        ])
         # env = Environment(loader=file_loader)
         env = Environment(loader=loader,
-    autoescape=select_autoescape())
+                          autoescape=select_autoescape())
         env.trim_blocks = True
         env.lstrip_blocks = True
         env.rstrip_blocks = True
@@ -67,7 +66,7 @@ class Render(Response):
         template = env.get_template(content)
         # print(**request.context.get_objs())
         content = template.render(
-            **{'csrf': request.csrf,'user': request.user, 'messages': messages_broker.get_messages(request), **request.params, **context})
+            **{'csrf': request.csrf, 'user': request.user, 'messages': messages_broker.get_messages(request), **request.params, **context})
         # else:
         #     content = f'Template {content} not found.'
         # content = template.render(*context)
@@ -114,8 +113,9 @@ class Http404Response(ErrorResponse):
             r = p.path
             if p.name:
                 r += ' ' + p.name
-            logs.append(r)    
-        doc = ErrorPage(request, logs, '404 page not found', 'available paths', '', debug)
+            logs.append(r)
+        doc = ErrorPage(request, logs, '404 page not found',
+                        'available paths', '', debug)
         self.response_content.append(str(doc).encode())
 
 

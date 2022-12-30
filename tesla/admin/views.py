@@ -1,7 +1,7 @@
 
 import tesla
 from tesla.auth.decorators import login_required
-from tesla.auth.views import login as user_login, authenticate
+from tesla.auth.views import login as user_login, logout as user_logout, authenticate
 from tesla.functions import url
 from tesla.response import HttpResponse, Redirect, Render, JsonResponse
 from tesla.pyhtml import CT
@@ -21,22 +21,22 @@ from . import collections_manage
 def collections(request):
     context = {}
     context['names'] = collections_manage.colls()
-    
-    return Render(request, 'admin/colls.html', context)
 
+    return Render(request, 'admin/colls.html', context)
 
 
 @login_required(path='admin:login')
 def collection(request):
-    collection = request.params.get('collection') 
+    collection = request.params.get('collection')
     model_db = JsonDB(collection + '/')
     model = model_db.model()
     context = {}
     search_for = request.query.get('search')
     if search_for:
-        models = Search(model.all(models=True), search_for, model.__meta__()).result()
+        models = Search(model.all(models=True), search_for,
+                        model.__meta__()).result()
         context['search_for'] = search_for
-    else:    
+    else:
         models = model_db.all(models=True)
     page = request.query.get('page')
     if not page:
@@ -54,6 +54,7 @@ def collection(request):
     context['collection'] = collection
     return Render(request, 'admin/col.html', context)
 
+
 @login_required(path='admin:login')
 def collection_obj(request):
     lookup = request.params.get('lookup')
@@ -62,7 +63,7 @@ def collection_obj(request):
     obj = model_db.model().get(id=lookup)
     if 'json' in request.query:
         return JsonResponse(request, obj.json())
-     
+
     form = AdminForm(obj)
     form.model = model_db.model
     form.fields = '__all__'
@@ -72,13 +73,14 @@ def collection_obj(request):
         # print(data)
         obj.update(**data)
         obj = obj.save()
-        
-        return Redirect(request, 'admin:collection_obj', lookup = lookup, collection = collection)
+
+        return Redirect(request, 'admin:collection_obj', lookup=lookup, collection=collection)
     context = {}
     context['lookup'] = lookup
     context['collection'] = collection
     context['form'] = form
     return Render(request, 'admin/obj.html', context)
+
 
 @login_required(path='admin:login')
 def collection_new(request):
@@ -93,12 +95,13 @@ def collection_new(request):
     if request.method == 'POST':
         data = request.post.data
         del data['csrfmiddleware']
-        f = form.validate(**data) 
+        f = form.validate(**data)
         f.save()
         return Redirect(request, 'admin:collection_obj', collection=collection, lookup=f.id)
-    return Render(request, 'admin/col_n.html', context)    
+    return Render(request, 'admin/col_n.html', context)
 
-@login_required(path='admin:login')    
+
+@login_required(path='admin:login')
 def collection_del(request):
     lookup = request.params.get('lookup')
     collection = request.params.get('collection')
@@ -106,6 +109,7 @@ def collection_del(request):
     obj = model_db.model().get(id=lookup)
     obj.delete()
     return Redirect(request, 'admin:collection', collection=collection)
+
 
 @login_required(path='admin:login')
 def collection_del_all(request):
@@ -117,20 +121,22 @@ def collection_del_all(request):
         obj.delete()
     return Redirect(request, 'admin:collection', collection=collection)
 
+
 @login_required(path='admin:login')
 def collection_download(request):
-    
+
     collection = request.params.get('collection')
     model_db = JsonDB(collection + '/')
     objs = model_db.model().all(models=False)
     return JsonResponse(request, objs)
+
 
 @login_required(path='admin:login')
 def admin_account(request):
     obj = tesla.TeslaApp.auth_model.get(id=request.user.id)
     if 'json' in request.query:
         return JsonResponse(request, obj.json())
-    print(obj) 
+    print(obj)
     form = AdminForm(obj)
     form.model = tesla.TeslaApp.auth_model
     form.fields = '__all__'
@@ -143,9 +149,11 @@ def admin_account(request):
     context['form'] = form
     return Render(request, 'admin/account.html', context)
 
-@login_required(path='admin:login')    
+
+@login_required(path='admin:login')
 def admin_settings(request):
-    ...    
+    ...
+
 
 @login_required(path='admin:login')
 def index(request):
@@ -156,16 +164,15 @@ def index(request):
 
 
 def login(request):
-    
+
     if request.method == 'POST':
         u = request.post.get('username')
         p = request.post.get('password')
         user = User.get(username=u)
         if authenticate(user, p):
-            user_login(request , user)
+            user_login(request, user)
             return Redirect(request, 'admin:index')
     return Render(request, 'admin/login.html')
-
 
 
 def register(request):
@@ -173,8 +180,8 @@ def register(request):
         u = request.post.get('username')
         e = request.post.get('email')
         p = request.post.get('password')
-        user = User.create(username=u, email=e, password=p)
-        user.save()
+        User.create(username=u, email=e, password=p)
+        return Redirect(request, 'admin:login')
     return Render(request, 'admin/register.html')
 
 
@@ -185,5 +192,5 @@ def reset_password(request):
 
 
 def logout(request):
-    request.clear_cookie()
-    return Redirect(request, 'admin:register')
+    user_logout(request)
+    return Redirect(request, 'admin:login')

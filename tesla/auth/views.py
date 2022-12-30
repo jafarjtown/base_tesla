@@ -1,7 +1,7 @@
 from tesla import TeslaApp
 from tesla.functions import redirect
 from tesla.pyhtml import PYHTML
-from tesla.pyhtml.tags import  CT, CSS, CSSGroup
+from tesla.pyhtml.tags import CT, CSS, CSSGroup
 from tesla.response import HttpResponse
 from tesla.auth.forms import LoginForm, RegisterForm
 from tesla.database.localdb import global_db
@@ -9,25 +9,31 @@ from tesla.database.localdb import global_db
 
 import random as r
 import string
+from datetime import datetime
 # LoginForm().save()
 
 
 def login(request, user):
     session = ''.join(r.sample(string.ascii_letters, 50))
 
-    request.set_cookie('usersession', session)
+    request.set_cookie('user_session', session)
     global_db.add(session, user)
 
-    request.session.add_to_session(session, {'__id': user.id,'session':str(session)})
+    request.session.add_to_session(
+        session, {'__id': user.id, 'session': str(session)})
 
+
+def logout(request):
+    request.headers += [('Set-Cookie',
+                        'user_session=null;expires=Thu,01 Jan 1970 00:00:00 GMT;path=/')]
 
 
 def LoginView(request):
-    
+
     if request.is_authenticated:
         return redirect(request, '/')
     form_data = LoginForm()
-    
+
     if request.method == 'POST':
         username = request.post.get('username')
         password = request.post.get('password')
@@ -38,7 +44,7 @@ def LoginView(request):
             return redirect(request, '/')
         # print(username, password)
     doc = PYHTML()
-    head,body = doc.create_doc()
+    head, body = doc.create_doc()
 
     # head
     title = CT('title', 'Tesla | Authentication View')
@@ -89,18 +95,18 @@ button{
 }
 
                ''')
-    p = CT('p', '*This is default Tesla login page') 
+    p = CT('p', '*This is default Tesla login page')
     form_style = CSS(
-        display = 'flex',
-        flexDirection= 'column',
-        alignItems = 'center',
-        padding = '10px',
-        margin = 'auto',
-        marginTop = '30px',
-        width = '250px',
-        gap = '10px',
-        backgroundColor = 'lightgray',
-        borderRadius = '5px'
+        display='flex',
+        flexDirection='column',
+        alignItems='center',
+        padding='10px',
+        margin='auto',
+        marginTop='30px',
+        width='250px',
+        gap='10px',
+        backgroundColor='lightgray',
+        borderRadius='5px'
     )
 
     head.append(title, style)
@@ -109,20 +115,18 @@ button{
     csrf = CT('input', value=request.csrf, name='csrfmiddleware', hidden=1)
     h2 = CT('h2', 'User login view')
 
-
     login_btn = CT('button', 'login')
     form.append(h2, csrf, form_data, login_btn, p)
     body.append(form)
     return HttpResponse(request, str(doc))
 
 
-
 def RegisterView(request):
-    
+
     if request.is_authenticated:
         return redirect(request, '/')
     form_data = RegisterForm()
-    
+
     if request.method == 'POST':
         username = request.post.get('username')
         password = request.post.get('password')
@@ -135,7 +139,7 @@ def RegisterView(request):
             return redirect(request, '/')
         # print(username, password)
     doc = PYHTML()
-    head,body = doc.create_doc()
+    head, body = doc.create_doc()
 
     # head
     title = CT('title', 'Tesla | Authentication View')
@@ -186,14 +190,13 @@ button{
 }
 
                ''')
-    p = CT('p', '*This is default Tesla Register page') 
+    p = CT('p', '*This is default Tesla Register page')
 
     head.append(title, style)
     # form
     form = CT('form', method='POST', enctype="multipart/form-data")
     csrf = CT('input', value=request.csrf, name='csrfmiddleware', hidden=1)
     h2 = CT('h2', 'User Register view')
-
 
     login_btn = CT('button', 'login')
     form.append(h2, csrf, form_data, login_btn, p)
@@ -207,10 +210,10 @@ def authenticate(user, en_password):
     try:
         ph.verify(user.password, en_password)
         if ph.check_needs_rehash(user.password):
-            user.password= ph.hash(password)
+            user.password = ph.hash(password)
             user.save()
-            
+
             ...
-        return  True   
+        return True
     except:
         return False
