@@ -1,5 +1,5 @@
 from tesla.router import Path
-from tesla.response import HttpResponse
+from tesla.response import HttpResponse, Redirect
 from dataclasses import dataclass
 import os
 
@@ -26,7 +26,8 @@ class MediaFiles:
 
     def __post_init__(self):
         self.urls =  [
-                Path('/<filename>/', self.file)     
+                Path('/{filename}/', self.file, name='file'),     
+                Path('/{filename}/delete', self.delete, name='delete'),     
             ]
 
 
@@ -41,6 +42,15 @@ class MediaFiles:
             return HttpResponse(request, f"invalidd address\n {filename}")
         with open(filename, 'rb') as file:
             return HttpResponse(request, file.read(), content_type=filetype)
+    
+    def delete(self, request):
+        filename = request.params['filename']
+        next = request.query.get('next')
+        filename, filetype = filename.split('>')
+        filename = self.path + filename
+        if not os.path.isfile(filename):  
+            os.remove(filename)
+        return Redirect(request, next)    
 
 
  

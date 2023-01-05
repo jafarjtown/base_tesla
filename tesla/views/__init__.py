@@ -43,7 +43,7 @@ class DetailView(View):
             json_obj = obj.json()    
         return self.response(request, json_obj)
 
-class RetriveAllView(View):
+class RetrieveAllView(View):
     
     def get(self, request, *args, **kwargs):
         all = self.model.all(models=True)

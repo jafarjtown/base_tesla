@@ -248,12 +248,22 @@ class JsonDB:
         return json.load(open(ABS_PATH + 'db.json'))
 
     def create_column(self, model, table_name):
-
-        with open(self.path + self.collection + table_name + '.json', 'w+') as file:
-            json.dump(model, file, indent=4)
-            local_db.update(self.collection.split(
-                '/')[0], model.get('id'), model)
-            return None
+        bck = None
+        if os.path.isfile(self.path + self.collection + table_name + '.json'):
+            with open(self.path + self.collection + table_name + '.json') as file:
+                bck = json.load(file)
+        try:
+            
+            with open(self.path + self.collection + table_name + '.json', 'w+') as file:
+                json.dump(model, file, indent=4)
+                local_db.update(self.collection.split(
+                    '/')[0], model.get('id'), model)
+                return None
+        except Exception as e:
+            if bck:
+                with open(self.path + self.collection + table_name + '.json', 'w+') as file:
+                    json.dump(bck, file, indent=4)
+            raise Exception(e)
 
     def delete(self, table_name):
         os.remove(self.path + self.collection + table_name + '.json')

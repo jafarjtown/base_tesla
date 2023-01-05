@@ -18,7 +18,7 @@
 			<div class="app-card app-card-settings shadow-sm p-4">
 
 				<div class="app-card-body">
-					<form class="settings-form" method="post">
+					<form class="settings-form" method="post" enctype="multipart/form-data">
 						<input type="text" value="{{csrf}}" name="csrfmiddleware" hidden>
 
 						{% for f in form.html() %}

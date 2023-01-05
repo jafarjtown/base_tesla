@@ -15,14 +15,18 @@ class TemporaryFile:
 
     def __init__(self, file, filename, path, *args, **kwargs) -> None:
         self.file = file
+        
         self.filename = filename
         self.path = path
 
         # print(self.filename, self.file)
 
-    def save(self):
+    def save(self, upload_to=''):
         # print('file obj',self.file)
-        path = self.path + '/' + self.file.type
+        if not upload_to.startswith('/') and upload_to != '':
+            upload_to = '/' + upload_to
+            
+        path = self.path + upload_to + '/' + self.file.type
 
         def fbuffer(f, chunk_size=10000):
             while True:
@@ -39,7 +43,7 @@ class TemporaryFile:
         with open(path + '/' + fn, 'wb+') as f:
             for chunk in fbuffer(self.file.file):
                 f.write(chunk)
-        return path + '/'+fn + f'>{self.file.type}'
+        return '/'+ path + '/'+fn + f'>{self.file.type}'
 
 
 class PostBody:
@@ -158,7 +162,7 @@ class Request:
                 # self.csrf = self.app.csrf_tokens[r.randint(0, len(self.app.csrf_tokens)-1)]
             # print(self.csrf)
 
-            raise Exception('csrf is not provided')
+            # raise Exception('csrf is not provided')
 
     def parse_qs(self):
         # print(self.environ)
@@ -171,7 +175,7 @@ class Request:
                 k, v = q.split('=')
             self.query[k] = v.replace('+', ' ')
 
-        if self.method != 'POST':
+        if self.method not in ['POST', 'PUT']:
 
             return
 
@@ -185,6 +189,9 @@ class Request:
 
         for item in field_storage.list:
             if not item.filename:
+                if type(item.value) not in [str, int, float]:
+                    continue
+                
                 if self.post.get(item.name):
                     self.post.addlist(item.name, item.value)
                     continue

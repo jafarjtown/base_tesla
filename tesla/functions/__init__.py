@@ -24,6 +24,11 @@ def media_file(url, *args, **kwargs):
             
             
 
+def truncate(sentence, n=15):
+    if len(sentence) > n:
+        return sentence[:n]+'...'
+    return sentence
+
 
 def include():
     ...

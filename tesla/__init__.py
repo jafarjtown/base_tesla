@@ -35,8 +35,8 @@ class _App:
         self.middlewares = middlewares
         self.media_file = 'media'
 
-        self.mount('/static', staticfiles.urls)
-        self.mount('/media', mediafiles.urls)
+        self.mount('/static', staticfiles.urls, app_name='static')
+        self.mount('/media', mediafiles.urls, app_name='static')
         
         pass
     
@@ -46,11 +46,13 @@ class _App:
         for path in routes:
             self.router.add_route(path)
 
-    def mount(self, path, urls):
+    def mount(self, path, urls, app_name):
         # print(path)
         for p in urls:
-            p.path = path + p.path
-            # print(p.path)
+            if app_name != None:
+                if p.name:
+                    p.name += f'_{app_name}'
+                    p.path = path + p.path
             self.router.add_routes([p])           
 
     def __call__(self, environ, start_response):

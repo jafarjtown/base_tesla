@@ -71,7 +71,7 @@ def collection_obj(request):
     if request.method == 'POST':
         data = request.post.data
         del data['csrfmiddleware']
-        # print(data)
+        print(data)
         obj.update(**data)
         obj = obj.save()
 

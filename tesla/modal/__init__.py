@@ -1,20 +1,14 @@
 # from __future__ import annotations
+import uuid
 from copy import deepcopy
-
-from tesla.signal import signal
-
-from tesla.pyhtml.tags import CT, CSS
-
-
 from datetime import datetime
+
 # from tempfile import TemporaryFile
 from tesla.database.jsondb import JsonDB
-import uuid
-import copy
-
+from tesla.functions import truncate, url
+from tesla.pyhtml.tags import CSS, CT
 from tesla.request import TemporaryFile
-
-_no_default_object = object()
+from tesla.signal import signal
 
 
 def property_obj(arr, d=None):
@@ -262,6 +256,89 @@ class BooleanField(Field):
         # return super().html(**kwargs)
         self.__pre_show__()
         return self.tag.html()
+
+class NumberField(Field):
+    
+    def __init__(self, required=False, label=None) -> None:
+        
+        super().__init__(required, label)
+        self.input_type = 'number'
+        self.default = 0 
+        self.min = -9999999999
+        self.max = 99999999999
+    
+        
+    def input(self, *args):
+        kwargs = {}
+        kwargs['min'] = self.min
+        kwargs['max'] = self.max
+        return super().input(*args, **kwargs)    
+
+class PositiveNumberField(NumberField):
+    
+    def __init__(self, required=False, label=None) -> None:
+        super().__init__(required, label)
+        self.default = 0 
+        self.min = 0
+        self.max = 9999999999
+    
+
+class NegativeNumberField(NumberField):
+    
+    def __init__(self, required=False, label=None) -> None:
+        super().__init__(required, label)
+        self.default = -1 
+        self.min = -999999999
+        self.max = 0
+    
+        
+
+class FileField(Field):
+    
+    def __init__(self,upload_to = '' , required=False, label=None) -> None:
+        super().__init__(required, label)
+        self.upload_to = upload_to
+        self.accept = '*'
+    
+    def html(self, **kwargs) -> str:
+        self.input(self.name)
+        self.tag = CT('input', type='file', accept=self.accept, name=self.name, params=self.params)
+        if self.default:
+            p = CT('p', 'current file : ')
+            old_file = CT('a',  truncate(self.default), href=self.default)
+            delete_old_file = CT('a',  'remove', href=self.default + '?next={{request.path}}')
+            
+            p.append(old_file)
+            p.append(' | ')
+            p.append(delete_old_file)
+            self.tag = CT('span', self.tag, p)
+        # return super().html(**kwargs)
+        self.__pre_show__()
+        return self.tag.html()    
+    def validate_file(self, file, name):
+        if self.accept == '*':
+            return
+        file_type = self.accept[:-2]
+        if file.type.split('/')[0] != file_type:
+            raise Exception(f'{file.type} is not accepted for {name}') 
+class ImageField(FileField):
+    
+    def __init__(self, upload_to='', required=False, label=None) -> None:
+        super().__init__(upload_to, required, label)
+        self.accept = 'image/*'
+
+class AudioField(FileField):
+    
+    def __init__(self, upload_to='', required=False, label=None) -> None:
+        super().__init__(upload_to, required, label)
+        self.accept = 'audio/*'
+
+class VideoField(FileField):
+    
+    def __init__(self, upload_to='', required=False, label=None) -> None:
+        super().__init__(upload_to, required, label)
+        self.accept = 'video/*'
+
 class Model:
 
     id = CharField()
@@ -374,13 +451,13 @@ class Model:
         signal.send(self.__class__, self, created, 'pre-save')
         cls_copy = self.__class__
 
-        js = self.json()
-        j = copy.deepcopy(js)
+        j = {**self.json()}
         cls_props = to_dict(property_obj(cls_copy, True))
         props = {**cls_props, **j}
 
 
         for k, v in props.items():
+            
             if '__' in k:
                 ref_k = k.split('__')[0]
                 if ref_k in j:
@@ -399,13 +476,20 @@ class Model:
                 else:
                     j[kk] = v.default
                 continue
-            elif issubclass(type(v), BooleanField):
+            elif issubclass(type(v), (BooleanField, DateField)):
                 j[k] = v.default
+                
             elif issubclass(type(cls_props.get(k)), BooleanField):
                 if v == 'on':
                     j[k] = True  
                 else:
                     j[k] = False        
+            elif issubclass(type(v), TemporaryFile):
+                _model_field = cls_props.get(k)
+                _model_field.validate_file(v.file, k)
+                j[k] = v.save(_model_field.upload_to)
+            elif type(v) == str and v.isnumeric():
+                j[k] = int(v)    
             setattr(self, k, v)
 
         # if not bool(self.id):
@@ -413,7 +497,7 @@ class Model:
         #     j['id'] = self.id
         #     self.timestamp = str(datetime.now())
         #     j['timestamp'] = self.timestamp
-        # print(j)
+
         self.db.create_column(model=j, table_name=str(self.id))
         # self.db.g
         signal.send(self.__class__, self, created,'post-save')

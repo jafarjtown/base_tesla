@@ -1,6 +1,6 @@
 
 from tesla.auth.modal import UserBaseModal
-from tesla.modal import Model, CharField, ListField, TextField, EmailField, PasswordField,DateField, BooleanField
+from tesla.modal import Model, CharField, FileField, TextField, EmailField, PasswordField,DateField, BooleanField, ImageField, NumberField, PositiveNumberField, NegativeNumberField
 
 from dataclasses import dataclass
 
@@ -17,6 +17,11 @@ class User(UserBaseModal):
     
     dob = DateField()
     bio = TextField()
+    age = PositiveNumberField()
+    dept = NegativeNumberField()
+    account = NumberField()
+    profile_pic = ImageField(upload_to='users_files')
+    profile_doc = FileField(upload_to='users_files')
     
     is_super_user = BooleanField()
     
