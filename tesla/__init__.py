@@ -49,10 +49,11 @@ class _App:
     def mount(self, path, urls, app_name):
         # print(path)
         for p in urls:
+            # print(p)
             if app_name != None:
                 if p.name:
                     p.name += f'_{app_name}'
-                    p.path = path + p.path
+                p.path = path + p.path
             self.router.add_routes([p])           
 
     def __call__(self, environ, start_response):

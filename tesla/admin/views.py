@@ -8,7 +8,7 @@ from tesla.pyhtml import CT
 from .models import User
 from .forms import AdminForm
 from tesla.database.jsondb import JsonDB
-from tesla.views import View, DetailView, RetriveAllView
+# from tesla.views import View, DetailView, RetriveAllView
 from tesla.pagination import Paginator
 from tesla.search import Search
 

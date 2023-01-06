@@ -32,7 +32,7 @@ class StaticFiles:
 
     def __post_init__(self):
         self.urls =  [
-                Path('/<filename>/', self.file)     
+                Path('/{filename}/', self.file)     
             ]
 
 
