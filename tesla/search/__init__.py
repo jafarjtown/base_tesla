@@ -16,7 +16,7 @@ class Search:
             return []
         temp = set()
         for model in self.objs:
-            print(model)
+            # print(model)
             for f in self.lookp_ups:
                 
                 if not hasattr(model, f):

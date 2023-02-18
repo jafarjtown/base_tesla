@@ -1,5 +1,6 @@
 from tesla.router.url import get_dynamic_url
-
+from tesla.response import Render
+import os
 class Path:
     def __init__(self, path, func, name=None):
         self.path = path 
@@ -50,6 +51,4 @@ class Router:
                 return route.func
         return None
     
-    
-
 router = Router() 

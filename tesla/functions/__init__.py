@@ -1,4 +1,4 @@
-from tesla.response import Redirect
+from tesla.response import Redirect, tesla
 from tesla.static import staticfiles
 from tesla.router import router
 
@@ -14,7 +14,7 @@ def media_file(url, *args, **kwargs):
         return ''
     _, filetype = url.split('>')
     f, _ = filetype.split('/')
-    url = '/' + url
+    # url =  url
     if f == 'video':
             return CT('video',*args, **kwargs,  src=url)
     elif f == 'audio':

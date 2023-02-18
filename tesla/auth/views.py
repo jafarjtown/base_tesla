@@ -1,22 +1,19 @@
-from tesla import TeslaApp
-from tesla.functions import redirect
-from tesla.pyhtml import PYHTML
-from tesla.pyhtml.tags import CT, CSS, CSSGroup
-from tesla.response import HttpResponse
-from tesla.auth.forms import LoginForm, RegisterForm
-from tesla.database.localdb import global_db
-
-
 import random as r
 import string
-from datetime import datetime
-# LoginForm().save()
+
+from tesla import TeslaApp
+from tesla.auth.forms import LoginForm, RegisterForm
+from tesla.database.localdb import global_db
+from tesla.functions import redirect
+from tesla.pyhtml import PYHTML
+from tesla.pyhtml.tags import CSS, CT, CSSGroup
+from tesla.response import HttpResponse
 
 
 def login(request, user):
     session = ''.join(r.sample(string.ascii_letters, 50))
 
-    request.set_cookie('user_session', session)
+    request.set_cookie('user_session', session, {'max-age': 1296000})
     global_db.add(session, user)
 
     request.session.add_to_session(

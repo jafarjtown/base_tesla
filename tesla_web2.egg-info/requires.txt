@@ -1,0 +1,5 @@
+uuid
+jinja2
+tesla-admin
+argon2-cffi
+waitress

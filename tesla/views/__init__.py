@@ -17,7 +17,8 @@ class View:
             if hasattr(cls, method.lower()):
                 func = getattr(cls, method.lower())
                 return func(request, *args, **kwargs)
-            ...
+            else:
+                raise Exception(f'{method} Method is not allowed or provided')
             
         return wrapper
     

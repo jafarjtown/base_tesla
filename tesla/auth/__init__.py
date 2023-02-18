@@ -1,5 +1,5 @@
 from tesla.database.localdb import global_db
-from .modal import UserBaseModal
+from .modal import User
 # from http.cookiejar import Cookie
 
 
@@ -17,7 +17,7 @@ class Authentication:
     def __init__(self):
         self.ANONYMOUS = Anonymous()
         self.user = None
-        self.model = UserBaseModal
+        self.model = User
         self.session_id = ''
         
         pass
@@ -32,7 +32,7 @@ class Authentication:
 
     def authenticate(self, session_id, session):
         user_session = session.get(session_id)
-        # print(user_session)
+        # print(f'{user_session=}')
         # print(user_session)
         self.session_id = session_id
         if not user_session:

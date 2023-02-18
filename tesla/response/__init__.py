@@ -66,7 +66,7 @@ class Render(Response):
         template = env.get_template(content)
         # print(**request.context.get_objs())
         content = template.render(
-            **{'csrf': request.csrf, 'user': request.user, 'messages': messages_broker.get_messages(request), **request.params, **context})
+            **{'user': request.user, 'messages': messages_broker.get_messages(request), **request.params, **context})
         # else:
         #     content = f'Template {content} not found.'
         # content = template.render(*context)

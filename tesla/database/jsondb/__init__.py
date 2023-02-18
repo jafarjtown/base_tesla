@@ -204,7 +204,7 @@ class Column:
         return JsonDB(key.title()).get(args)
 
 
-class JsonDB:
+class DB:
     # db = {}
     abs_path = ''
 
@@ -352,25 +352,3 @@ class JsonDB:
                 if contains:
                     result.append(i)
         return result
-
-
-# db = DB("users/", User)
-# products = DB("products/", Product)
-# pr1 = products.create_column("watch")
-# pr1.update({"name": "US watch", "rate": 5})
-#jafar = db.create_column('jafar')
-#nura = db.create_column('nura')
-#jafar.update({'name':'Jafar Idris','age':50, 'nura': nura.read('id')})
-#nura.update({'name':'Nura Idris','age':50, 'nura': nura.read('id')})
-#json_db = jafar.readAll()
-#name = jafar.read('age')
-#jafar.clear(['name','age', 'nura'])
-# jafar.clearAll()
-#json_db = jafar.readAll()
-# print(json_db)
-# all = db.filter({'age__gt':5, 'age__lt':59})
-#pr1 = db.get({"id":"a58b1227-a97d-4705-a630-460604fdebf7"})
-# print(pr1)
-# print(all)
-# for c in all:
-#    print(c.read("name"), c.read('age'))

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field, asdict, astuple
-
+# from .auth import csrf_middleware
 
 @dataclass
 class Middlewares:
@@ -23,3 +23,5 @@ class Middlewares:
     
     
 middlewares = Middlewares()    
+
+# middlewares.register_middleware(csrf_middleware)

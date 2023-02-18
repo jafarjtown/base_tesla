@@ -6,6 +6,8 @@ from dataclasses import dataclass
 import cgi
 import cgitb
 cgitb.enable()
+
+# from tesla import TeslaApp
 # from Cookie import SimpleCookie
 # from time import t
 
@@ -15,7 +17,7 @@ class TemporaryFile:
 
     def __init__(self, file, filename, path, *args, **kwargs) -> None:
         self.file = file
-        
+
         self.filename = filename
         self.path = path
 
@@ -25,7 +27,7 @@ class TemporaryFile:
         # print('file obj',self.file)
         if not upload_to.startswith('/') and upload_to != '':
             upload_to = '/' + upload_to
-            
+
         path = self.path + upload_to + '/' + self.file.type
 
         def fbuffer(f, chunk_size=10000):
@@ -43,7 +45,7 @@ class TemporaryFile:
         with open(path + '/' + fn, 'wb+') as f:
             for chunk in fbuffer(self.file.file):
                 f.write(chunk)
-        return '/'+ path + '/'+fn + f'>{self.file.type}'
+        return '/' + path + '/'+fn + f'>{self.file.type}'
 
 
 class PostBody:
@@ -80,10 +82,111 @@ class PostBody:
     #     return o
 
 
-class Request:
-    def __init__(self, environ, start_response, app, csrf, authentication, context, session, auth_model):
+def parse_cookies(environ):
+    cookies = {}
+    cookie_string = environ.get('HTTP_COOKIE', '')
+    for chunk in cookie_string.split(';'):
+        if '=' in chunk:
+            key, value = chunk.split('=', 1)
+            key, value = key.strip(), value.strip()
+            cookies[key] = value
+    return cookies
+
+
+def parse_query_string(query_string):
+    query = {}
+    for param in query_string.split('&'):
+        if '=' in param:
+            key, value = param.split('=', 1)
+            key, value = key.strip(), value.strip()
+            query[key] = value
+    return query
+
+
+def parse_form_data(environ):
+    try:
+        request_body_size = int(environ.get('CONTENT_LENGTH', 0))
+    except ValueError:
+        request_body_size = 0
+    request_body = environ['wsgi.input'].read(request_body_size)
+    form_data = {}
+    for param in request_body.decode().split('&'):
+        if '=' in param:
+            key, value = param.split('=', 1)
+            key, value = key.strip(), value.strip()
+            form_data[key] = value
+    return form_data
+
+
+def parse_file_upload(environ):
+    files = {}
+    try:
+        request_body_size = int(environ.get('CONTENT_LENGTH', 0))
+    except ValueError:
+        request_body_size = 0
+    request_body = environ['wsgi.input'].read(request_body_size)
+    boundary = environ.get('CONTENT_TYPE', '').split('=')[-1]
+    if not boundary:
+        return files
+    parts = request_body.split(boundary.encode())[1:-1]
+    for part in parts:
+        lines = part.decode().split('\r\n')
+        name = None
+        filename = None
+        content_type = None
+        data = b''
+        for line in lines:
+            if line.startswith('Content-Disposition:'):
+                name = line.split(';')[-1].split('=')[-1][1:-1]
+                filename = line.split(';')[-2].split('=')[-1][1]
+            elif line.startswith('Content-Type:'):
+                content_type = line.split(':')[-1].strip()
+            elif line == '':
+                data = b''.join(lines[lines.index(line)+1:])
+        if name and data:
+            files[name] = {
+                'filename': filename,
+                'content_type': content_type,
+                'data': data,
+            }
+    return files
+
+
+class _Request:
+    def __init__(self, environ, start_response, app, authentication, context, session, auth_model):
+        self.environ = environ
+        self.start_response = start_response
         self.app = app
-        self.csrf = csrf
+        # self.csrf_token = csrf_token
+        self.authentication = authentication
+        self.context = context
+        self.session = session
+        self.auth_model = auth_model
+        self.method = environ['REQUEST_METHOD']
+        self.path = environ['PATH_INFO']
+        self.headers = {k[5:]: v for k,
+                        v in environ.items() if k.startswith('HTTP_')}
+        self.cookies = parse_cookies(environ)
+        self.query_string = environ.get('QUERY_STRING', '')
+        self.GET = parse_query_string(self.query_string)
+        self.POST = parse_form_data(environ)
+        self.FILES = parse_file_upload(environ)
+
+    def pass_csrf(self):
+        if self.method == 'POST':
+            csrf_token = self.headers.get('X-CSRF-TOKEN', '')
+            if not csrf_token:
+                raise Exception('Missing CSRF token')
+            if csrf_token != self.csrf_token:
+                raise Exception('Invalid CSRF token')
+
+
+class Request:
+    def __init__(self, environ, start_response, app, authentication, context, session, auth_model):
+        self.app = app
+        # self.csrf = csrf
+        self.csrf_check = False
+        self.params = {}
         self.environ = environ
         self.start_response = start_response
         self.cookies = {}
@@ -109,60 +212,97 @@ class Request:
         self.query_string = environ.get('QUERY_STRING')
         self.server_protocol = environ.get('SERVER_PROTOCOL')
         self.server_software = environ.get('SERVER_SOFTWARE')
+
         self.parse_cookie()
         self.set_session_id()
         # auth request's
+        # print(f'{self.session_id=}')
         authentication.authenticate(self.session_id, self.session)
 
         self.user = authentication.get_user()
         self.is_authenticated = self.user != authentication.ANONYMOUS
         self.session_id = authentication.session_id
         self.parse_qs()
+
+        self.GET = parse_query_string(self.query_string)
+        self.POST = parse_form_data(environ)
+        self.FILES = parse_file_upload(environ)
         # self.pass_csrf()
-        pass
+        # self.csrf_middleware()
+        # pass
 
     def set_session_id(self):
-        found = False
+        # found = False
         session = self.get_cookie('user_session')
         if session:
+            if ';' in session:
+                session = session.replace(';', '')
             self.session_id = session
+            # print(session)
             return
         session = ''.join(r.sample(string.ascii_letters, 50))
         self.session_id = session
-        self.set_cookie('user_session', session)
-        # if self.cookies:
-
-        #     for c in self.http_cookie.split(';'):
-        #         key, value, *_ = c.split('=')
-        #         # print(2)
-        #         if key.strip() == 'usersession':
-        #             self.session_id = value.strip()
-        #             found = True
-        #             break
-        # if found != True:
-        #     session = ''.join(r.sample(string.ascii_letters, 50))
-        #     self.session_id = session
-        #     self.set_cookie('usersession', session)
-
+        self.set_cookie('user_session', session,  {'max-age': 1296000})
+        
     def pass_csrf(self):
 
-        if self.method == 'POST':
+        if self.method in ['POST', 'PUT', 'DELETE']:
+            # print(self.csrf_check)
+            if self.csrf_check == False:
+                return
+            
+            # self.x_csrf_token = environ.get('HTTP_X_CSRF_TOKEN')
+            csrf_token = self.post.data.get(
+                'csrfmiddleware', None) or self.environ.get('HTTP_X_CSRF_TOKEN') or self.get_cookie('csrf_middleware_token')
+            
+            if csrf_token is not None:
+                if csrf_token in self.app.csrf_tokens:
+                    # print(self.dynamic_csrf)
+                    if self.dynamic_csrf:
+                        self.app.csrf_tokens.remove(csrf_token)
+                        self.csrf_token = self.app.csrf_tokens[r.randint(
+                            0, len(self.app.csrf_tokens)-1)]
 
-            csrf = self.post.get('csrfmiddleware')
-            if csrf is not None:
-                if csrf in self.app.csrf_tokens:
-
-                    self.app.csrf_tokens.remove(csrf)
-                    self.csrf = self.app.csrf_tokens[r.randint(
-                        0, len(self.app.csrf_tokens)-1)]
-
-                    self.app.csrf_tokens.append(
-                        ''.join(r.sample([*string.ascii_letters,  *string.hexdigits], 55)))
+                        self.app.csrf_tokens.append(
+                            ''.join(r.sample([*string.ascii_letters,  *string.hexdigits], 55)))
                     return None
                 # self.csrf = self.app.csrf_tokens[r.randint(0, len(self.app.csrf_tokens)-1)]
             # print(self.csrf)
 
-            # raise Exception('csrf is not provided')
+            if not csrf_token:
+                raise Exception('Missing CSRF token')
+            elif csrf_token not in self.app.csrf_tokens:
+                raise Exception('Invalid CSRF token')
+        else:
+            # elif csrf_token == None:
+            # if self.dynamic_csrf:
+            csrf_token = self.app.csrf_tokens[r.randint(
+                0, len(self.app.csrf_tokens)-1)]
+            self.csrf_token = csrf_token
+            # self.csrf_token = self.app.csrf_tokens    
+            self.set_header('Set-cookie', f'csrf_middleware_token={self.csrf_token}')
+
+    def csrf_middleware(self):
+        # print(self.environ.get('wsgi.csrf_token'))
+        print(self.FILES, self.POST)
+        # return
+        csrf_token = self.cookies.get('csrf_middleware')
+        if self.method == 'POST':
+            print(csrf_token)
+            if not csrf_token:
+                raise Exception('Missing CSRF token')
+            elif csrf_token not in self.app.csrf_tokens:
+                raise Exception('Invalid CSRF token')
+            # self.csrf_token = csrf_token
+            # else:
+            #     csrf_token = self.app.csrf_tokens[r.randint(0, len(self.app.csrf_tokens)-1)]
+            #     self.csrf_token = csrf_token
+            #     self.set_header('Set-Cookie', f'csrf_middleware={csrf_token};max-age=300;path=/')
+        elif csrf_token == None:
+            csrf_token = self.app.csrf_tokens[r.randint(
+                0, len(self.app.csrf_tokens)-1)]
+            self.csrf_token = csrf_token
+            self.set_header('Set-Session', f'csrf_middleware={csrf_token}')
 
     def parse_qs(self):
         # print(self.environ)
@@ -191,7 +331,7 @@ class Request:
             if not item.filename:
                 if type(item.value) not in [str, int, float]:
                     continue
-                
+
                 if self.post.get(item.name):
                     self.post.addlist(item.name, item.value)
                     continue
@@ -204,14 +344,16 @@ class Request:
     def clear_cookie(self):
         self.cookie = []
 
-    def set_cookie(self, k, v, **kwargs):
+    def set_cookie(self, k, v, kwargs={}):
         default = {
             'path': '/',
             'max-age': 1296000,
         }
         kwargs = {**default, **kwargs}
+        # print(kwargs)
         p = ';'.join([f'{k}={v}' for k, v in kwargs.items()])
         self.cookies[k] = v
+        # print(p)
         self.set_header('Set-Cookie', f'{k}={v};{p}')
 
     def parse_cookie(self):
@@ -220,7 +362,7 @@ class Request:
         cookies = self.http_cookie.split(' ')
         for cookie in cookies:
             k, v = cookie.split('=')
-            self.set_cookie(k, v)
+            self.set_cookie(k, v, {})
 
     def set_header(self, key, value):
         self.headers += [(key, value)]

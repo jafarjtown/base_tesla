@@ -10,7 +10,7 @@ class Form:
         data = dict(obj)
         del data['csrfmiddleware']
         for key, value in data.items():
-            print(key, value)
+            # print(key, value)
             b = self.fields()[key].validate(value)
             if not b:
                 ...

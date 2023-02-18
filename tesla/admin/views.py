@@ -57,7 +57,7 @@ def collection(request):
 
 @login_required(path='admin:login')
 def collection_obj(request):
-    print(request.user.is_super_user)
+    # print(request.user.is_super_user)
     lookup = request.params.get('lookup')
     collection = request.params.get('collection')
     model_db = JsonDB(collection + '/')
@@ -71,7 +71,7 @@ def collection_obj(request):
     if request.method == 'POST':
         data = request.post.data
         del data['csrfmiddleware']
-        print(data)
+        # print(data)
         obj.update(**data)
         obj = obj.save()
 
@@ -137,7 +137,7 @@ def admin_account(request):
     obj = tesla.TeslaApp.auth_model.get(id=request.user.id)
     if 'json' in request.query:
         return JsonResponse(request, obj.json())
-    print(obj)
+    # print(obj)
     form = AdminForm(obj)
     form.model = tesla.TeslaApp.auth_model
     form.fields = '__all__'
@@ -188,7 +188,8 @@ def register(request):
 
 def reset_password(request):
     if request.method == 'POST':
-        print('es')
+        # print('es')
+        pass
     return Render(request, 'admin/reset-password.html')
 
 

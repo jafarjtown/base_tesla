@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from tesla.exceptions import DatabaseException
-from tesla.modal import Model
+from tesla.modal import Model, PasswordField, EmailField
 from argon2 import PasswordHasher 
 
 
@@ -26,3 +26,8 @@ class UserBaseModal(Model):
             self.password = password
         # elif ph.    
         return super().save()
+    
+
+class User(UserBaseModal):
+    email = EmailField()
+    password = PasswordField()

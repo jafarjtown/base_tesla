@@ -4,7 +4,8 @@ from copy import deepcopy
 from datetime import datetime
 
 # from tempfile import TemporaryFile
-from tesla.database.jsondb import JsonDB
+from tesla.database.jsondb import DB as JsonDB
+from tesla.database.SQL import DB as SQLDB
 from tesla.functions import truncate, url
 from tesla.pyhtml.tags import CSS, CT
 from tesla.request import TemporaryFile
@@ -43,19 +44,6 @@ def ModalId():
         return 1
     return generate
 
-
-id_gener = ModalId()
-
-
-class ModalObject:
-    def __init__(self, obj):
-        self.obj = obj
-
-    def filter(self, **kwargs):
-        pass
-
-    def get(self, **kwargs):
-        return self.obj.get(**kwargs)
 
 
 class Field:
@@ -101,9 +89,9 @@ class Field:
         self.__pre_show__()
         return self.tag.html()
 
-    def __str__(self):
-        self.html()
-        return self.tag.html()
+    # def __str__(self):
+    #     self.html()
+    #     return self.tag.html()
 
     def __repr__(self):
         return self.__class__.__name__
@@ -156,10 +144,10 @@ class TextField(Field):
         self.type = 'textarea'
 
 
-class EmailField(Field):
+class EmailField(CharField):
 
-    def __init__(self, default='', *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, default='', min=0, max=120, *args, **kwargs) -> None:
+        super().__init__(default, min, max, *args, **kwargs)
         self.default = default
         self.input_type = 'email'
 
@@ -247,6 +235,7 @@ class BooleanField(Field):
         super().__init__(required, label)
         self.input_type = 'checkbox'
         self.default = False
+        self.value_type = bool
     
     def html(self, **kwargs) -> str:
         self.input(self.name)
@@ -266,6 +255,7 @@ class NumberField(Field):
         self.default = 0 
         self.min = -9999999999
         self.max = 99999999999
+        self.value_type = int
     
         
     def input(self, *args):
@@ -343,6 +333,7 @@ class Model:
 
     id = CharField()
     timestamp = CharField()
+    __db_type__ = 'sql'
 
     def __init__(self) -> None:
         self.assign_foreign()
@@ -356,8 +347,8 @@ class Model:
 
     @classmethod
     def create(cls, *args, **kwargs):
-        kwargs['id'] = str(uuid.uuid4())
-        kwargs['timestamp'] = str(datetime.now())
+        # kwargs['id'] = str(uuid.uuid4())
+        # kwargs['timestamp'] = str(datetime.now())
         c = cls()
         for k, v in kwargs.items():
 
@@ -373,23 +364,35 @@ class Model:
 
     @classmethod
     def all(cls, models=True):
-
-        db = JsonDB(collection=cls.__name__ + "/")
+        if cls.__db_type__.lower() == 'sql': 
+            db = SQLDB(cls.__name__,  property_obj(cls, True))
+        elif cls.__db_type__.lower() == 'json':
+            db = JsonDB(collection=cls.__name__ + "/")
+            
         if not models:
-            return list(db.all())
+            return list(db.all(json=True))
         l = []
         for m in db.all():
             c = cls()
+            if type(m) != dict:
+                dj = {}
+                k = cls().property_cls()
+                k = ["i"] + k
+                for k, v in zip(k, m):
+                    # if i == 0:
+                    #     dj['id'] = m[i]
+                    dj[k] = v
+                m = dj
             for k, v in m.items():
 
                 if '__' in k:
                     mn = k.split('__')[0]
                     tt = getattr(c, mn)
-
-                    if isinstance(type(tt), ForeignKey):
+                    if issubclass(type(tt), ForeignKey):
                         tt.related_model_id = v
                         setattr(c, mn, tt.related_model.get(id=v))
-                    if isinstance(type(tt), ManyToManyField):
+                        
+                    if issubclass(type(tt), ManyToManyField):
                         tt.related_model_ids = []
                         for i in v:
                             tt.related_model_ids.append(i)
@@ -404,15 +407,23 @@ class Model:
 
     @classmethod
     def size(cls):
-        db = JsonDB(collection=cls.__name__ + "/")
+        if cls.__db_type__.lower() == 'sql': 
+            db = SQLDB(cls.__name__,  property_obj(cls, True))
+        elif cls.__db_type__.lower() == 'json':
+            db = JsonDB(collection=cls.__name__ + "/")
+            
         return db.size()
 
     @classmethod
     def get(cls, *args, **kwargs):
 
-        db = JsonDB(collection=cls.__name__ + "/")
-        js = db.get(kwargs)
-
+        if cls.__db_type__.lower() == 'sql': 
+            db = SQLDB(cls.__name__, property_obj(cls, True))
+        elif cls.__db_type__.lower() == 'json':
+            db = JsonDB(collection=cls.__name__ + "/")
+            
+        js = db.get(**kwargs)
+        # print(js)
         c = None
         if js != None:
             c = cls()
@@ -423,6 +434,7 @@ class Model:
                     if issubclass(type(tt), ForeignKey):
                         tt.related_model_id = v
                         setattr(c, mn, tt.related_model.get(id=v))
+                        # print(k, v)
                     if issubclass(type(tt), ManyToManyField):
                         tt.related_model_ids = []
                         for i in v:
@@ -441,7 +453,11 @@ class Model:
 
     @property
     def db(self):
-        return JsonDB(collection=self.modal_name() + "/")
+        if self.__db_type__.lower() == 'sql': 
+            db = SQLDB(self.__class__.__name__,  property_obj(self, True))
+        elif self.__db_type__.lower() == 'json':
+            db = JsonDB(collection=self.__class__.__name__ + "/")
+        return db
 
     def modal_name(self):
         return (self.__class__.__name__)
@@ -464,17 +480,20 @@ class Model:
                     del j[ref_k]
             if type(v) == str and '__ids' in k:
                 j[k] = [v]
-            if issubclass(type(v), (ForeignKey, ManyToManyField)):
-                is_m2m = issubclass(type(v), ManyToManyField)
+            if issubclass(type(v), (ForeignKey, ManyToManyField)) or issubclass(type(cls_props.get(k)), (ForeignKey, ManyToManyField)):
+                is_m2m = issubclass(type(v), ManyToManyField) or issubclass(type(cls_props.get(k)), ManyToManyField)
                 # is_1t1 = issubclass(type(v), ForeignKey)
+                
                 kk = k + '__id'
                 if is_m2m:
                     kk += 's'
-                if kk in j.keys():
-                    if k in j.keys():
+                if k in j.keys():
                         del j[k]
+                if issubclass(type(v), Model):
+                    j[kk] = v.id
                 else:
                     j[kk] = v.default
+                # print(j, )
                 continue
             elif issubclass(type(v), (BooleanField, DateField)):
                 j[k] = v.default
@@ -498,7 +517,11 @@ class Model:
         #     self.timestamp = str(datetime.now())
         #     j['timestamp'] = self.timestamp
 
-        self.db.create_column(model=j, table_name=str(self.id))
+        # self.db.create_column(model=j, table_name=str(self.id))
+        # db = JsonDB(collection=cls.__name__ + "/")
+        # db = 
+        self.db.create(j)
+
         # self.db.g
         signal.send(self.__class__, self, created,'post-save')
         
@@ -539,27 +562,17 @@ class Model:
 
     def assign_foreign(self):
 
-        js = deepcopy(list(self.json().items()))
-        for k, v in js:
-            if '__' in k:
+        cls_copy = self.__class__
 
-                kwg = {}
-                cl, p = k.split('__')
-                kwg[p] = v
-                c = None
-                for cls in Model.__subclasses__():
-
-                    if cls.__name__ == cl.capitalize():
-
-                        c = cls.get(**kwg)
-                        break
-                    if cl.capitalize() in cls.__subclasses():
-                        for cls in cls.__subclasses__():
-                            if cls.__name__ == cl.capitalize():
-
-                                c = cls.get(**kwg)
-                                break
-                setattr(self, cl, c)
+        j = {**self.json()}
+        cls_props = to_dict(property_obj(cls_copy, True))
+        
+        # for k, v in j.items():
+        #     print(k, v)
+        #     if '__' in k:
+        #         rel_id = cls_copy.get(k).related_model_id
+        #         print(rel_id)
+            # setattr(self, cl, c)
 
     @classmethod
     def __meta__(cls):

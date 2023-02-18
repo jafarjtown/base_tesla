@@ -30,7 +30,7 @@ class Session:
         return self.values.values()
     
     def get(self, key):
-        # print(key)
+        print(f'{key=}')
         if key not in self.values:
             return None
         if self.values.get(key)['expire_at'] <= datetime.today().timestamp():
