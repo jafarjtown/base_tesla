@@ -284,11 +284,11 @@ class Request:
 
     def csrf_middleware(self):
         # print(self.environ.get('wsgi.csrf_token'))
-        print(self.FILES, self.POST)
+        # print(self.FILES, self.POST)
         # return
         csrf_token = self.cookies.get('csrf_middleware')
         if self.method == 'POST':
-            print(csrf_token)
+            # print(csrf_token)
             if not csrf_token:
                 raise Exception('Missing CSRF token')
             elif csrf_token not in self.app.csrf_tokens:

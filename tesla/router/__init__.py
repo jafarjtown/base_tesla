@@ -51,4 +51,11 @@ class Router:
                 return route.func
         return None
     
+    def get_404(self):
+        for route in self.routes:
+            # print(route.path) 
+            if route.name and route.name.startswith('404'):
+                return route._func
+        return None
+    
 router = Router() 
